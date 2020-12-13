@@ -3,7 +3,7 @@
 #include <entt/entity/registry.hpp>
 #include <entt/entity/organizer.hpp>
 
-#include "./fireworks_lib.hpp"
+#include <fireworks_lib.hpp>
 
 #include <taskflow/taskflow.hpp>
 

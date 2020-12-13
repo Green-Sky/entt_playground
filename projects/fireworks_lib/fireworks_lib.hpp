@@ -41,6 +41,13 @@ namespace Components {
 		float time_remaining = 0.f;
 	};
 
+	struct Particle2DPropulsion {
+		float dir = 0.f;
+		float amount = 10.f; // m/s^2 ?
+	};
+
+	// now some fireworks specifics
+
 	struct FireworksExplosion {
 		enum exp_type_t : uint16_t {
 			FULL = 0,
@@ -65,11 +72,6 @@ namespace Components {
 
 		float explosion_timer = 1.f;
 		FireworksExplosion explosion;
-	};
-
-	struct Particle2DPropulsion {
-		float dir = 0.f;
-		float amount = 10.f; // m/s^2 ?
 	};
 }
 
