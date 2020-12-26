@@ -54,7 +54,7 @@ void setup_sim(entt::registry& scene) {
 	auto& org = scene.ctx_or_set<entt::organizer>(); // we need to keep it around
 
 	//scene.set<std::mt19937>(std::random_device{}());
-	scene.set<std::mt19937>(1337 + 42); // since we want it to be predictable
+	scene.set<std::mt19937>(1337uL + 42uL); // since we want it to be predictable
 	// ... i know mersenne twister is not good, but its good enough for this test
 
 	{ // systems
