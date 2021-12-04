@@ -191,7 +191,7 @@ static void spawn_fireworks_explosion(entt::registry& scene, const glm::vec2& po
 
 namespace Systems {
 
-	void particle_fireworks_rocket(
+	inline void particle_fireworks_rocket(
 		entt::registry& scene,
 		entt::view<entt::exclude_t<>, Components::FireworksRocket, Components::Particle2DPropulsion, const Components::Particle2DVel> view,
 		std::mt19937& mt, const Components::OrgFrameTime& ft
@@ -249,7 +249,7 @@ namespace Systems {
 		});
 	}
 
-	void particle_2d_propulsion(entt::view<entt::exclude_t<>, Components::Particle2DVel, const Components::Particle2DPropulsion> view, const Components::OrgFrameTime& ft) {
+	inline void particle_2d_propulsion(entt::view<entt::exclude_t<>, Components::Particle2DVel, const Components::Particle2DPropulsion> view, const Components::OrgFrameTime& ft) {
 		view.each([&ft](Components::Particle2DVel& p, const Components::Particle2DPropulsion& prop) {
 			float tmp_dir = prop.dir + glm::pi<float>();
 			p.vel +=
@@ -258,31 +258,27 @@ namespace Systems {
 		});
 	}
 
-	void particle_2d_gravity(entt::view<entt::exclude_t<>, Components::Particle2DVel> view, const Components::OrgFrameTime& ft) {
+	inline void particle_2d_gravity(entt::view<entt::exclude_t<>, Components::Particle2DVel> view, const Components::OrgFrameTime& ft) {
 		view.each([&ft](Components::Particle2DVel& p) {
 			p.vel += glm::vec2{0.f, -10.f} * ft.fixedDelta;
 		});
 	}
 
-	void particle_2d_vel(entt::view<entt::exclude_t<>, Components::Particle2DVel> view, const Components::OrgFrameTime& ft) {
+	inline void particle_2d_vel(entt::view<entt::exclude_t<>, Components::Particle2DVel> view, const Components::OrgFrameTime& ft) {
 		view.each([&ft](Components::Particle2DVel& p) {
 			p.vel -= p.vel * p.dampening * ft.fixedDelta;
 			p.pos += p.vel * ft.fixedDelta;
 		});
 	}
 
-	void particle_life(entt::view<entt::exclude_t<>, Components::ParticleLifeTime> view, const Components::OrgFrameTime& ft) {
+	inline void particle_life(entt::view<entt::exclude_t<>, Components::ParticleLifeTime> view, const Components::OrgFrameTime& ft) {
 		view.each([&ft](Components::ParticleLifeTime& lt) {
 			lt.time_remaining -= ft.fixedDelta;
 		});
 	}
 
-	//void particle_death(entt::view<entt::exclude_t<>, const Components::ParticleLifeTime> view, entt::registry& scene) {
-	void particle_death(entt::registry& scene) {
-		auto view = scene.view<Components::ParticleLifeTime>();
-
+	inline void particle_death(entt::registry& scene, entt::view<entt::exclude_t<>, const Components::ParticleLifeTime> view) {
 		std::vector<entt::entity> to_delete;
-		to_delete.reserve(view.size()); // overkill?
 
 		view.each([&to_delete](entt::entity e, const Components::ParticleLifeTime& lt) {
 			if (lt.time_remaining <= 0.f) {

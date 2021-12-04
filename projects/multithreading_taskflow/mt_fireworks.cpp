@@ -39,7 +39,7 @@ namespace Systems {
 	// this has inner parallelism
 	void particle_2d_vel_tf(tf::Subflow* sf, entt::view<entt::exclude_t<>, Components::Particle2DVel> view, const Components::OrgFrameTime& ft) {
 		// raw() is only available for groups and single-component-views
-		Components::Particle2DVel* raw = view.raw();
+		Components::Particle2DVel* raw = *view.raw();
 		sf->for_each_index_static<size_t, size_t, size_t>(0, view.size(), 1, [&ft, raw](size_t i) {
 			auto& p = raw[i];
 			p.vel -= p.vel * p.dampening * ft.fixedDelta;
@@ -62,10 +62,19 @@ void setup_sim(entt::registry& scene) {
 		org.emplace<Systems::particle_2d_propulsion>("particle_2d_propulsion");
 		org.emplace<Systems::particle_2d_gravity>("particle_2d_gravity");
 
-		//org.emplace<Systems::particle_2d_vel>("particle_2d_vel"); // this is the not optimsed version
+#if 1
+		org.emplace<Systems::particle_2d_vel>("particle_2d_vel"); // this is the not optimsed version
+#endif
 
-		//tf::Subflow* tmp_sf = nullptr;
-		//org.emplace<Systems::particle_2d_vel_tf>(tmp_sf, "particle_2d_vel_tf"); // this is hacky, AND does not buid rn (09.12.2020)
+#if 0
+		tf::Subflow* tmp_sf = nullptr;
+		org.emplace<Systems::particle_2d_vel_tf>(tmp_sf, "particle_2d_vel_tf"); // this is hacky, AND does not buid rn (09.12.2020)
+#endif
+
+#if 0 // disabled for update to entt v3.8.1
+		//this makes particle_death deleting entities crash.
+		// TODO: need to investigate, might want to updat to entt v3.9 first
+		// TODO: update tf too
 
 		// This is the method with the most control,
 		auto fn = +[](const void* payload, entt::registry& scene) {
@@ -78,6 +87,7 @@ void setup_sim(entt::registry& scene) {
 		>(
 			fn, nullptr, "particle_2d_vel_tf"
 		);
+#endif
 
 		org.emplace<Systems::particle_life>("particle_life");
 		org.emplace<Systems::particle_death>("particle_death");
@@ -103,7 +113,7 @@ void update_organizer_vertices(entt::registry& scene) {
 int main(int argc, char** argv) {
 	(void)argc;
 	(void)argv;
-	tf::Executor ex;
+	tf::Executor ex{1};
 
 	entt::registry scene;
 
@@ -118,7 +128,7 @@ int main(int argc, char** argv) {
 		// update_organizer_vertices() stores them as ctx
 		auto& org_vert = scene.ctx<std::vector<entt::organizer::vertex>>();
 
-		// we need to adress them, before they are finished, so we prepare placeholders
+		// we need to address them, before they are finished, so we prepare placeholders
 		std::vector<tf::Task> tf_tasks;
 		for (size_t i = 0; i < org_vert.size(); i++) { // same size, same indices
 			tf_tasks.emplace_back(tf_no_inner.placeholder());
@@ -131,8 +141,8 @@ int main(int argc, char** argv) {
 			}
 
 			tf_tasks[i].work([&scene, &v](tf::Subflow& sf) {
-				// this here is somewhat of a hack of the current verion:
-				// we suply allways a subflow, and ignore v.data(), this might be very wrong.
+				// this here is somewhat of a hack of the current version:
+				// we allways supply a subflow, and ignore v.data(), this might be very wrong.
 				// but its easy callsite injection of the subflow, which we "need" for inner parallalism
 				v.callback()(/*v.data()*/(void*)&sf, scene);
 			});
