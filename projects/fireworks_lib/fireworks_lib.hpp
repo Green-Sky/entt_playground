@@ -91,7 +91,7 @@ static const glm::vec3 color_list[color_list_size] {
 };
 
 static void spawn_fireworks_rocket(entt::registry& scene) {
-	auto& mt = scene.ctx<std::mt19937>();
+	auto& mt = scene.ctx().at<std::mt19937>();
 
 	auto e = scene.create();
 	auto& fr = scene.emplace<Components::FireworksRocket>(e);
@@ -120,7 +120,7 @@ static void spawn_fireworks_rocket(entt::registry& scene) {
 }
 
 static void spawn_fireworks_explosion_full(entt::registry& scene, const glm::vec2& pos, const uint16_t amount, const float strenth, const glm::vec3& color) {
-	auto& mt = scene.ctx<std::mt19937>();
+	auto& mt = scene.ctx().at<std::mt19937>();
 
 	for (size_t i = 0; i < amount; i++) {
 		auto e = scene.create();
@@ -144,7 +144,7 @@ static void spawn_fireworks_explosion_full(entt::registry& scene, const glm::vec
 }
 
 static void spawn_fireworks_explosion_circle(entt::registry& scene, const glm::vec2& pos, const uint16_t amount, const float strenth, const glm::vec3& color) {
-	auto& mt = scene.ctx<std::mt19937>();
+	auto& mt = scene.ctx().at<std::mt19937>();
 
 	const float dampening = 1.0f + random_float(mt, 0.f, 0.5f, 1000.f);
 
@@ -193,7 +193,7 @@ namespace Systems {
 
 	inline void particle_fireworks_rocket(
 		entt::registry& scene,
-		entt::view<entt::exclude_t<>, Components::FireworksRocket, Components::Particle2DPropulsion, const Components::Particle2DVel> view,
+		entt::view<entt::get_t<Components::FireworksRocket, Components::Particle2DPropulsion, const Components::Particle2DVel>> view,
 		std::mt19937& mt, const Components::OrgFrameTime& ft
 	) {
 		view.each(
@@ -249,7 +249,7 @@ namespace Systems {
 		});
 	}
 
-	inline void particle_2d_propulsion(entt::view<entt::exclude_t<>, Components::Particle2DVel, const Components::Particle2DPropulsion> view, const Components::OrgFrameTime& ft) {
+	inline void particle_2d_propulsion(entt::view<entt::get_t<Components::Particle2DVel, const Components::Particle2DPropulsion>> view, const Components::OrgFrameTime& ft) {
 		view.each([&ft](Components::Particle2DVel& p, const Components::Particle2DPropulsion& prop) {
 			float tmp_dir = prop.dir + glm::pi<float>();
 			p.vel +=
@@ -258,26 +258,26 @@ namespace Systems {
 		});
 	}
 
-	inline void particle_2d_gravity(entt::view<entt::exclude_t<>, Components::Particle2DVel> view, const Components::OrgFrameTime& ft) {
+	inline void particle_2d_gravity(entt::view<entt::get_t<Components::Particle2DVel>> view, const Components::OrgFrameTime& ft) {
 		view.each([&ft](Components::Particle2DVel& p) {
 			p.vel += glm::vec2{0.f, -10.f} * ft.fixedDelta;
 		});
 	}
 
-	inline void particle_2d_vel(entt::view<entt::exclude_t<>, Components::Particle2DVel> view, const Components::OrgFrameTime& ft) {
+	inline void particle_2d_vel(entt::view<entt::get_t<Components::Particle2DVel>> view, const Components::OrgFrameTime& ft) {
 		view.each([&ft](Components::Particle2DVel& p) {
 			p.vel -= p.vel * p.dampening * ft.fixedDelta;
 			p.pos += p.vel * ft.fixedDelta;
 		});
 	}
 
-	inline void particle_life(entt::view<entt::exclude_t<>, Components::ParticleLifeTime> view, const Components::OrgFrameTime& ft) {
+	inline void particle_life(entt::view<entt::get_t<Components::ParticleLifeTime>> view, const Components::OrgFrameTime& ft) {
 		view.each([&ft](Components::ParticleLifeTime& lt) {
 			lt.time_remaining -= ft.fixedDelta;
 		});
 	}
 
-	inline void particle_death(entt::registry& scene, entt::view<entt::exclude_t<>, const Components::ParticleLifeTime> view) {
+	inline void particle_death(entt::registry& scene, entt::view<entt::get_t<const Components::ParticleLifeTime>> view) {
 		std::vector<entt::entity> to_delete;
 
 		view.each([&to_delete](entt::entity e, const Components::ParticleLifeTime& lt) {

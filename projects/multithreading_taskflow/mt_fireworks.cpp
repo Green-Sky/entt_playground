@@ -37,9 +37,12 @@ static std::ostream& operator<<(std::ostream& out, const std::vector<entt::organ
 namespace Systems {
 
 	// this has inner parallelism
-	void particle_2d_vel_tf(tf::Subflow* sf, entt::view<entt::exclude_t<>, Components::Particle2DVel> view, const Components::OrgFrameTime& ft) {
-		// raw() is only available for groups and single-component-views
-		Components::Particle2DVel* raw = *view.raw();
+	void particle_2d_vel_tf(tf::Subflow* sf, entt::view<entt::get_t<Components::Particle2DVel>> view, const Components::OrgFrameTime& ft) {
+		//Components::Particle2DVel* raw = *view.raw();
+
+		view.storage().compact(); // TODO: move to extra system
+
+		Components::Particle2DVel* raw = *view.storage().raw();
 		sf->for_each_index_static<size_t, size_t, size_t>(0, view.size(), 1, [&ft, raw](size_t i) {
 			auto& p = raw[i];
 			p.vel -= p.vel * p.dampening * ft.fixedDelta;
@@ -51,10 +54,10 @@ namespace Systems {
 
 
 void setup_sim(entt::registry& scene) {
-	auto& org = scene.ctx_or_set<entt::organizer>(); // we need to keep it around
+	auto& org = scene.ctx().emplace<entt::organizer>(); // we need to keep it around
 
 	//scene.set<std::mt19937>(std::random_device{}());
-	scene.set<std::mt19937>(1337uL + 42uL); // since we want it to be predictable
+	scene.ctx().emplace<std::mt19937>(1337uL + 42uL); // since we want it to be predictable
 	// ... i know mersenne twister is not good, but its good enough for this test
 
 	{ // systems
@@ -68,17 +71,17 @@ void setup_sim(entt::registry& scene) {
 
 #if 0
 		tf::Subflow* tmp_sf = nullptr;
-		org.emplace<Systems::particle_2d_vel_tf>(tmp_sf, "particle_2d_vel_tf"); // this is hacky, AND does not buid rn (09.12.2020)
+		org.emplace<Systems::particle_2d_vel_tf>(tmp_sf, "particle_2d_vel_tf"); // this is hacky, AND does not build rn (09.12.2020)
 #endif
 
-#if 0 // disabled for update to entt v3.8.1
+#if 0 // disabled for update to entt v3.8.1 // updated to v3.10.0, and it still does the same
 		//this makes particle_death deleting entities crash.
-		// TODO: need to investigate, might want to updat to entt v3.9 first
+		// TODO: need to investigate, might want to update to entt v3.9 first // update: updated to v3.10.0
 		// TODO: update tf too
 
 		// This is the method with the most control,
 		auto fn = +[](const void* payload, entt::registry& scene) {
-			Systems::particle_2d_vel_tf(static_cast<tf::Subflow*>((void*)payload), scene.view<Components::Particle2DVel>(), scene.ctx<Components::OrgFrameTime>());
+			Systems::particle_2d_vel_tf(static_cast<tf::Subflow*>((void*)payload), scene.view<Components::Particle2DVel>(), scene.ctx().at<Components::OrgFrameTime>());
 		};
 
 		// but also with the most responsibility. We have to specify by hand AND overwrite registry as read-only.
@@ -101,13 +104,13 @@ void setup_sim(entt::registry& scene) {
 }
 
 void update_organizer_vertices(entt::registry& scene) {
-	scene.ctx_or_set<std::vector<entt::organizer::vertex>>() = scene.ctx_or_set<entt::organizer>().graph();
+	scene.ctx().emplace<std::vector<entt::organizer::vertex>>() = scene.ctx().emplace<entt::organizer>().graph();
 
-	if (!scene.try_ctx<Components::OrgFrameTime>()) {
-		scene.set<Components::OrgFrameTime>();
+	if (!scene.ctx().contains<Components::OrgFrameTime>()) {
+		scene.ctx().emplace<Components::OrgFrameTime>();
 	}
 
-	std::cout << "entt organizer graph:\n" << scene.ctx<std::vector<entt::organizer::vertex>>() << "\n";
+	std::cout << "entt organizer graph:\n" << scene.ctx().at<std::vector<entt::organizer::vertex>>() << "\n";
 }
 
 int main(int argc, char** argv) {
@@ -126,7 +129,7 @@ int main(int argc, char** argv) {
 	tf_no_inner.name("taskflow entt org no-inner-parallelism");
 	{ // build taskflow
 		// update_organizer_vertices() stores them as ctx
-		auto& org_vert = scene.ctx<std::vector<entt::organizer::vertex>>();
+		auto& org_vert = scene.ctx().at<std::vector<entt::organizer::vertex>>();
 
 		// we need to address them, before they are finished, so we prepare placeholders
 		std::vector<tf::Task> tf_tasks;
